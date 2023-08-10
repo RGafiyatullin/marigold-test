@@ -1,0 +1,17 @@
+[workspace]
+members = ["kernel/*"]
+
+[workspace.dependencies]
+derive_more = "^0.99"
+serde = "^1"
+serde-json-wasm = "^1"
+thiserror = "^1"
+nom = "^7"
+
+tezos_crypto_rs = {version = "0.5", default-features = false}
+tezos_data_encoding = "^0.5"
+
+tezos-smart-rollup = "^0.2"
+tezos-smart-rollup-debug = "^0.2"
+tezos-smart-rollup-encoding = "^0.2"
+tezos-smart-rollup-mock = "^0.2"
