@@ -1,0 +1,122 @@
+---
+title: ToDo Tezos Kernel
+format:
+    pdf:
+        toc: true
+        toc-title: Contents
+
+        number-sections: false
+    html:
+        embed-resources: true
+        smooth-scroll: true
+
+        toc: true
+        toc-title: Contents
+
+        number-sections: false
+
+        html-math-method:
+            method: katex
+---
+
+# Problem Definition
+
+> As a technical test, can you implement a TODO list using Tezos's Smart Rollup? The goal is to implement a kernel with the following features:
+> 
+>  - add a TODO to the storage
+>  - set/unset done of a given TODO
+>  - the project should look like a real one: tests, documentations, readme, etc...
+>  - no need to support many users nor authentication (but it would be awesome)
+>  
+> Because kernels are new to tezos, and there isn't too much documentations, I give you some links that might help you:
+> 
+>  - https://www.marigold.dev/post/how-to-write-a-rollup-kernel
+>  - https://www.marigold.dev/post/developing-a-real-world-smart-rollup
+>  - https://tezos.gitlab.io/alpha/smart_rollups.html
+> 
+> For this test, no need to deploy/originate the smart rollup, only the Rust code of the kernel matters.
+> 
+> You can create a repository where you want, github is nice.
+
+# Environment
+
+A Kernel has its state stored using the `Runtime` facilities (a filesystem like interface), e.g.:
+
+- [Runtime::store_write](https://docs.rs/tezos-smart-rollup/latest/tezos_smart_rollup/host/trait.Runtime.html#tymethod.store_write)
+- [Runtime::store_read_all](https://docs.rs/tezos-smart-rollup/latest/tezos_smart_rollup/host/trait.Runtime.html#tymethod.store_read_all)
+- [Runtime::store_delete](https://docs.rs/tezos-smart-rollup/latest/tezos_smart_rollup/host/trait.Runtime.html#tymethod.store_delete)
+- etc
+
+A Kernel's state transitions are driven by the messages it receives via its inbox:
+
+- [Runtime::read_input](https://docs.rs/tezos-smart-rollup/latest/tezos_smart_rollup/host/trait.Runtime.html#tymethod.read_input)
+
+# State. Data Model
+
+## Account.
+
+The main purpose for this entry is storing the data necessary for authentication.
+
+Path: `/accounts/{account-id}`
+
+Properties:
+
+- Public Key (or Public Key Hash);
+- Last Used Nonce.
+
+## Spaces.
+
+**Spaces** are the collections of entries with the same access properties.
+
+I saw the [`Runtime::store_count_subkeys`](https://docs.rs/tezos-smart-rollup/latest/tezos_smart_rollup/host/trait.Runtime.html#tymethod.store_count_subkeys) and [`trait Path`](https://docs.rs/tezos-smart-rollup/latest/tezos_smart_rollup/storage/path/trait.Path.html), which suggests that the data slots are supposed to be kept in a hierarchy.
+
+But I see no way to traverse all the subkeys of a node. Therefore, I probably need to keep an explicit index of the entries.
+
+Path: `/spaces/{space-id}`
+
+Properties:
+
+- List of references to the **Accounts** that are permitted to manage the entries in this **Space**;
+- List of **Entry** ID's that this **Space** contains.
+
+## ToDo Entry
+
+Path: `/spaces/{space-id}/{entry-id}`
+
+Properties:
+
+- Data: JsValue
+
+# State Transition. Messages
+
+## Register Account
+
+Properties:
+
+- **Account** ID
+- Public Key
+
+## Create Space
+
+Properties:
+
+- **Space** ID
+- Set of **Account** IDs that are allowed to operate this space
+
+## Set a ToDo Entry
+
+Properties:
+
+- **Space** ID
+- **ToDo Entry** ID
+- Data: JsValue
+
+
+
+
+
+
+
+
+
+

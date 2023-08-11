@@ -1,6 +1,5 @@
-pub mod signed;
-
-use signed::Signed;
+use crate::data::{AccountID, EntryData, EntryID, SpaceID};
+use crate::signing::{PublicKey, Signed};
 
 pub const MAGIC: u8 = 0xAF;
 
@@ -16,11 +15,33 @@ pub enum DecodeError {
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum TodoMessage {
-    Create(Signed<TodoCreate>),
+    AccountRegister(AccountRegister),
+    SpaceCreate(AccountID, SpaceID, Signed<SpaceCreate>),
+    TodoEntrySet(AccountID, SpaceID, EntryID, Signed<TodoEntrySet>),
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct TodoCreate {}
+#[serde(rename_all = "lowercase")]
+pub struct AccountRegister {
+    pub account_id: AccountID,
+    pub public_key: PublicKey,
+    pub signed: Signed<()>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub struct SpaceCreate {
+    pub space_id: SpaceID,
+    pub accounts: Vec<AccountID>,
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub struct TodoEntrySet {
+    pub space_id: SpaceID,
+    pub entry_id: EntryID,
+    pub data: EntryData,
+}
 
 impl TodoMessage {
     pub fn decode(input: &[u8]) -> Result<Self, DecodeError> {

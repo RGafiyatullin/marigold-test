@@ -4,21 +4,20 @@ use tezos_smart_rollup_debug::debug_msg;
 
 pub mod message;
 
-mod blake2;
 mod data;
+mod dispatch;
 mod kernel;
+mod signing;
+mod utils;
 
 use kernel::{Kernel, KernelReadInputExt, ReadInputError};
 
 pub fn entry<Host: Runtime>(host: &mut Host) {
     debug_msg!(host, "ENTER");
-    let kernel = kernel::init(host);
-    if let Err(reason) = run(kernel) {
-        debug_msg!(host, "{}", reason);
-        let mut e: &dyn std::error::Error = &reason;
-        while let Some(source) = e.source() {
-            debug_msg!(host, "- {}", source);
-            e = source;
+    {
+        let mut kernel = kernel::init(host);
+        if let Err(reason) = run(&mut kernel) {
+            utils::report_error(&mut kernel, "Kernel Failure", &reason);
         }
     }
     debug_msg!(host, "LEAVE");
@@ -27,21 +26,24 @@ pub fn entry<Host: Runtime>(host: &mut Host) {
 kernel_entry!(entry);
 
 #[derive(Debug, thiserror::Error)]
-enum KernelRunError {
-    // #[error("Not Implemented")]
-    // NotImplemented,
+enum KernelFailure {
     #[error("Error reading input")]
     ReadInputError(#[source] ReadInputError),
 }
 
-fn run(mut kernel: impl Kernel) -> Result<(), KernelRunError> {
+fn run(mut kernel: impl Kernel) -> Result<(), KernelFailure> {
     debug_msg!(kernel.host(), "run ENTER");
     loop {
-        let Some(message) = kernel.next_message().map_err(KernelRunError::ReadInputError)? else {
-            debug_msg!(kernel.host(), "Inbox empty, Ciao!");
+        // TODO: do not bail out if just a single message is corrupted.
+        let Some(message) = kernel.next_message().map_err(KernelFailure::ReadInputError)? else {
+            debug_msg!(kernel.host(), "Inbox empty, Bye!");
             break Ok(())
         };
 
         debug_msg!(kernel.host(), "Message: {:?}", message);
+
+        if let Err(reason) = dispatch::process_inbound_message(&mut kernel, message) {
+            utils::report_error(&mut kernel, "Error processing message", &reason);
+        }
     }
 }
