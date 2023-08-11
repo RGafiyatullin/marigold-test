@@ -17,6 +17,12 @@ pub enum MessageDispatchFailure {
 
     #[error("Verification Error")]
     VerificationError(#[source] VerificationError),
+
+    #[error("Store Error")]
+    StoreError(#[source] data::StoreError),
+
+    #[error("Read Error")]
+    ReadError(#[source] data::ReadError),
 }
 
 pub fn process_inbound_message(
@@ -49,8 +55,7 @@ fn process_account_register(
 
     let path = data::path_account(&account_register.account_id);
 
-    // TODO: handle gracefully
-    data::store_new(kernel, path, account_entry).expect("ew..");
+    data::store_new(kernel, path, account_entry).map_err(MessageDispatchFailure::StoreError)?;
 
     Ok(())
 }
@@ -64,7 +69,8 @@ fn process_space_create(
     let account_path = data::path_account(&by_account);
     let space_path = data::path_space(&space_id);
 
-    let Some(account_entry) = data::read::<Account>(&mut kernel, account_path).expect("ew...")
+    let Some(account_entry) = data::read::<Account>(&mut kernel, account_path)
+        .map_err(MessageDispatchFailure::ReadError)?
     else {
         return Err(MessageDispatchFailure::NoAccount)
     };
@@ -78,7 +84,7 @@ fn process_space_create(
     }
 
     let space_entry = Space { accounts: space_create.accounts.to_owned() };
-    data::store_new(kernel, space_path, space_entry).expect("ew...");
+    data::store_new(kernel, space_path, space_entry).map_err(MessageDispatchFailure::StoreError)?;
 
     Ok(())
 }
